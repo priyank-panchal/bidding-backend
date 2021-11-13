@@ -40,3 +40,7 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = product_master
         fields ='__all__'
+class AuctionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Auction_info
+        fields ='__all__'

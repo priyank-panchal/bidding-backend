@@ -1,10 +1,12 @@
-from django.db.models import manager
+from django.contrib.auth.models import User
 from django.http.response import JsonResponse
 from .models import *
-from rest_framework import mixins,generics, status
+from django.conf import settings
+from django.core.mail import message, send_mail
+from rest_framework import generics, status
 from rest_framework.response import Response
 from .serializer import *
-from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly,BasePermission
+from rest_framework.permissions import IsAuthenticatedOrReadOnly,IsAuthenticated,BasePermission
 from rest_framework.authentication import TokenAuthentication
 class WriteByAdminOnly(BasePermission):
     def has_permission(self,request,view):
@@ -41,6 +43,7 @@ class ProductwithParamter(generics.RetrieveUpdateDestroyAPIView):
     def get(self,request,pk):
             try:
                 allProduct = product_master.objects.get(id=pk)
+                allAuctioninfo=Auction_info.objects.get(product=allProduct)
                 resp={
                   'id':allProduct.id,
                   'name':allProduct.name,
@@ -51,8 +54,7 @@ class ProductwithParamter(generics.RetrieveUpdateDestroyAPIView):
                   'running_km':allProduct.running_km,
                   'fuel_type':allProduct.fuel_type,
                   'p_reg_date':allProduct.p_reg_date,
-                  'start_dateTimeInfo':allProduct.start_dateTimeInfo,
-                  'basePrice':allProduct.basePrice,
+                  'price':allAuctioninfo.basePrice
                 }
                 print(resp)
                 return JsonResponse(resp,safe=False,status=200)
@@ -99,6 +101,35 @@ class SubCategorywithParamter(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly,WriteByAdminOnly]
     queryset = subcategory_master.objects.all()
     serializer_class = SubCategorySerializer
+    def get(self,request,pk):
+        return self.retrieve(request,pk)
+    def put(self,request,pk):
+        return self.update(request,pk)
+    def delete(self,request,pk):
+        return self.destroy(request,pk)
+class Auctioninfo(generics.ListCreateAPIView):
+    authentication_classes=[TokenAuthentication]
+    permission_classes=[IsAuthenticated,WriteByAdminOnly]
+    queryset = Auction_info.objects.all()
+    serializer_class = AuctionSerializer
+    def get(self,request):
+        return self.list(request)
+    def post(self,request):
+        import json
+        data = json.loads(request.body)
+        productDetails = product_master.objects.get(id=data['product'])
+        subject='welcome to sabert Bet'
+        email_form =settings.EMAIL_HOST_USER
+        for i in User.objects.all():
+             message = f'Hi{i.first_name}  {productDetails.name}'
+             reciver=[i.email,]
+             send_mail(subject,message,email_form,reciver)
+        return self.create(request)
+class AuctionwithParamter(generics.RetrieveUpdateDestroyAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated,WriteByAdminOnly]
+    queryset = Auction_info.objects.all()
+    serializer_class = AuctionSerializer
     def get(self,request,pk):
         return self.retrieve(request,pk)
     def put(self,request,pk):
